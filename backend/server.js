@@ -20,17 +20,40 @@ connectDB();
 const app = express();
 
 // Middleware
-// Configure CORS to allow frontend origin
-const allowedOrigin = process.env.CLIENT_URL || 'http://localhost:5173';
+// Configure CORS to allow frontend origins
+const allowedOrigins = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(',').map((url) => url.trim())
+  : ['http://localhost:5173'];
+
 app.use(
   cors({
-    origin: allowedOrigin,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (such as curl, Render health checks, Postman)
+      if (!origin) return callback(null, true);
+      if (
+        process.env.CLIENT_URL === '*' ||
+        allowedOrigins.includes('*') ||
+        allowedOrigins.includes(origin)
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
     credentials: true,
   })
 );
 
 // Body parser for JSON
 app.use(express.json());
+
+// Root endpoint for Render health checks
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Helpdesk Support API is running live on Render',
+    health: 'OK',
+  });
+});
 
 // API Routes mounted under /api/...
 app.get('/api', (req, res) => {
